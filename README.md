@@ -59,12 +59,13 @@ test01演示性对mockito的基础功能进行演示：
 1. mock：对List接口进行Mock，模拟出了一个mocklis对象；
 2. stub：当调用List.get(0)时，返回“Hello Mock”；
 
+### Stubbing
+
 所谓stub，即使用“桩代码”替换目标测试类依赖的代码或未被实现的代码，目的：
 - [x] 隔离：确保测试不依赖外部类，不受外部类影响；
 - [x] 补缺：对未实现的代码，通过桩代码“实现”；
 - [x] 控制：通过桩代码提供测试过程中所需的数据；
 
-### Stubbing
 
 ```
     public static void testStubbing01() {
