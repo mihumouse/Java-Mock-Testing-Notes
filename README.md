@@ -40,15 +40,53 @@ import org.mockito.junit.MockitoJUnitRunner;
 public class HelloMockTest {
 
     @Test
-    public void name() {
-        // mock List interface
+    public void test01() {
+        // 1.mock List interface
         List mockList = Mockito.mock(List.class);
-        // stub mockList when get(0) return "Hello Mock"
+        
+        // 2.stub mockList when get(0) return "Hello Mock"
         Mockito.when(mockList.get(0)).thenReturn("Hello Mock");
-        // run the mocked List's methode
+        
+        // 3.run the mocked List's methode
         System.out.println(mockList.get(0));
-        // verify the get(0) was invoked
+        
+        // 4.verify the get(0) was invoked
         Mockito.verify(mockList).get(0);
     }
 
 ```
+test01演示性对mockito的基础功能进行演示：
+1. mock：对List接口进行Mock，模拟出了一个mocklis对象；
+2. stub：当调用List.get(0)时，返回“Hello Mock”；
+
+所谓stub，即使用“桩代码”替换目标测试类依赖的代码或未被实现的代码，目的：
+- [x] 隔离：确保测试不依赖外部类，不受外部类影响；
+- [x] 补缺：对未实现的代码，通过桩代码“实现”；
+- [x] 控制：通过桩代码提供测试过程中所需的数据；
+
+### Stubbing
+
+```
+    public static void testStubbing01() {
+        List mockList = Mockito.mock(List.class);
+        // stub        
+        Mockito.when(mockList.get(0)).thenReturn("the first");
+
+        // print "the first"
+        System.out.println(mockList.get(0));
+        // print "the first" too
+        System.out.println(mockList.get(0));
+        // print null
+        System.out.println(mockList.get(2));
+
+        Mockito.when(mockList.get(3)).thenReturn("the third");
+        Mockito.when(mockList.get(3)).thenThrow(new NullPointerException());
+        // throw exception
+        System.out.println(mockList.get(3));
+    }
+```
+- 打桩可以根据参数值返回具体值，也可抛出异常；
+- 同一条件，打多次桩，以最后一次为准；
+- 对相同it傲剑的打桩，调用多次，返回相同值；
+- 对未显式给出打桩的条件，mock会返回默认值，对象返回null，int\Integer返回0，boolean\Boolean返回false，等等；
+- 
