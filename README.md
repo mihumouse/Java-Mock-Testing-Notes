@@ -202,7 +202,7 @@ public class BookUtil {
     }
 }
 ```
-### mock by annotation
+### Mock by annotation
 Mockito.mock()的方式可以以注解写法替代，如下：
 目标测试类为BookPrinter，运行时，注解将Mock一个Book对象，注入到BookPrinter中的book变量。
 
@@ -323,3 +323,4 @@ public class Book {
     }
     ......
 ```
+4. 执行逻辑是调用第三方方法，则需要验证调用其方法的次数，以及传入参数；

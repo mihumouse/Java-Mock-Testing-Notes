@@ -7,7 +7,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
-public class Stubbing {
+public class StubbingTest {
     public static void testStubbing01() {
         List mockList = Mockito.mock(List.class);
         // stub        
