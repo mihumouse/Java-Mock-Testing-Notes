@@ -4,7 +4,28 @@ public class Book {
     private String name;
     private String auther;
     private String publishDate;
+    private Object content;
+    private int pageNum;
 
+    public int getPageNum() {
+        return pageNum;
+    }
+    
+    /**
+     * book's page number must greater than 0
+     */
+    public void setPageNum(int pageNum) {
+        if(pageNum <= 0) {
+            throw new IllegalArgumentException("the page number must greater than 0");
+        }
+        this.pageNum = pageNum;
+    }
+    
+    public String getContentByPage(int pageNum) {
+        // to do
+        return "some content";
+    }
+    
     public String getName() {
         return name;
     }
@@ -28,4 +49,13 @@ public class Book {
     public void setPublishDate(String publishDate) {
         this.publishDate = publishDate;
     }
+
+    public Object getContent() {
+        return content;
+    }
+
+    public void setContent(Object content) {
+        this.content = content;
+    }
+
 }

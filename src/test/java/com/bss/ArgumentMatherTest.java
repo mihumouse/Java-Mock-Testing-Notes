@@ -14,7 +14,8 @@ import org.mockito.junit.MockitoJUnitRunner;
 public class ArgumentMatherTest {
 
     /**
-     * List的ArgumentMatchers尝试
+     * try a ArgumentMatchers01
+     * for List
      */
     public static void testArgumentMather01() {
         List list = Mockito.mock(List.class);
@@ -35,7 +36,8 @@ public class ArgumentMatherTest {
     }
 
     /**
-     * 自定义对象的ArgumentMatchers尝试
+     * try a ArgumentMatchers
+     * stub BookUtil.isITBook()，if Book's name contains "java", return "true"
      */
     public static void testArgumentMather02() {
         BookUtil bookUtil = Mockito.mock(BookUtil.class);

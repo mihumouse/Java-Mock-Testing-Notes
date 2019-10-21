@@ -102,7 +102,8 @@ test01演示mockito的基础功能：
 public class ArgumentMatherTest {
 
     /**
-     * List的ArgumentMatchers尝试
+     * try a ArgumentMatchers01
+     * for List
      */
     public static void testArgumentMather01() {
         List list = Mockito.mock(List.class);
@@ -123,7 +124,8 @@ public class ArgumentMatherTest {
     }
 
     /**
-     * 自定义对象的ArgumentMatchers尝试
+     * try a ArgumentMatchers
+     * stub BookUtil.isITBook()，if Book's name contains "java", return "true"
      */
     public static void testArgumentMather02() {
         BookUtil bookUtil = Mockito.mock(BookUtil.class);
@@ -151,4 +153,173 @@ public class ArgumentMatherTest {
         testArgumentMather01();
         testArgumentMather02();
     }
+}
+
+print:
+hello
+hello
+Thinking in java :true
+some book :false
+```
+
+```
+public class Book {
+    private String name;
+    private String auther;
+    private String publishDate;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getAuther() {
+        return auther;
+    }
+
+    public void setAuther(String auther) {
+        this.auther = auther;
+    }
+
+    public String getPublishDate() {
+        return publishDate;
+    }
+
+    public void setPublishDate(String publishDate) {
+        this.publishDate = publishDate;
+    }
+}
+```
+
+```
+public class BookUtil {
+    public boolean isITBook(Book book) {
+        // to do
+        return false;
+    }
+}
+```
+### mock by annotation
+Mockito.mock()的方式可以以注解写法替代，如下：
+目标测试类为BookPrinter，运行时，注解将Mock一个Book对象，注入到BookPrinter中的book变量。
+
+```
+@RunWith(MockitoJUnitRunner.class)
+public class AnnotationMockTest {
+    // target test class
+    @InjectMocks
+    BookPrinter bookPrinter;
+
+    // target mock class
+    @Mock
+    Book book;
+
+    @Test
+    public void testBookPrinter01() {
+        // stub
+        Mockito.when(book.getContentByPage(anyInt())).thenReturn("page content");
+        // run
+        int totalPrintCount = bookPrinter.printByPage(1, 5);
+        // verify
+        Assert.assertEquals(5,totalPrintCount);
+    }
+}
+```
+BookPrinter类：
+```
+public class BookPrinter {
+    @Resource
+    Book book;
+
+    /**
+     * print content between startPageNum and endPageNum
+     * @param beginPageNum 
+     * @param endPageNum
+     * @return total print count
+     */
+    public int printByPage(int beginPageNum, int endPageNum) {
+        int totalPrintCount = 0;
+        int printNum = beginPageNum;
+        while(printNum <= endPageNum) {
+            print(book.getContentByPage(printNum));
+            printNum++;
+            totalPrintCount++;
+        }
+        return totalPrintCount;
+    }
+
+    private void print(String content) {
+        System.out.println(content);
+    }
+}
+```
+### Verify
+测试最终目的为验证结果正确性，mock、stub是为了解决目标测试程序对外部的依赖，verify则为验证数据而存在。
+存在几种verify的场景：
+1. 单一值验证，可直接Assert.assertEquals(结果值, 目标值)，布尔型Assert.assertTrue(结果值)；
+```
+Assert.assertEquals(5,totalPrintCount);
+```
+2. 集合数据验证，需验证总数以及每条数据每个属性，用多个assertTrue()；
+3. 异常验证：分期望无异常、期望有异常两种情形，verify方法如下
+注：ExpectedException务必为public
+
+```
+@RunWith(MockitoJUnitRunner.class)
+public class ExceptionAssertTest {
+
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
+
+    /**
+     * 期望抛出异常
+     */
+    @Test
+    public void BookTest01() {
+        expectedException.expect(IllegalArgumentException.class);
+        expectedException.expectMessage("the page number must greater than 0");
+        Book book = new Book();
+        book.setPageNum(-1);
+    }
+
+    /**
+     * 期望无异常
+     */
+    @Test
+    public void BookTest02() {
+        boolean isException = false;
+        Book book = new Book();
+        try {
+            book.setPageNum(100);
+        } catch (Exception e) {
+            isException = true;
+        }
+        Assert.assertFalse(isException);
+    }
+}
+```
+```
+public class Book {
+    private String name;
+    private String auther;
+    private String publishDate;
+    private Object content;
+    private int pageNum;
+
+    public int getPageNum() {
+        return pageNum;
+    }
+    /**
+     * book's page number must greater than 0
+     */
+    public void setPageNum(int pageNum) {
+        if(pageNum <= 0) {
+            throw new IllegalArgumentException("the page number must greater than 0");
+        }
+        this.pageNum = pageNum;
+    }
+    ......
 ```
