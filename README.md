@@ -12,7 +12,7 @@
 ## Mockito
 ![image text](https://raw.githubusercontent.com/mihumouse/Java-Mock-Testing-Notes/master/media/img/mockito%40logo%402x.png)
 
-[Mockito javadoc:](https://raw.githubusercontent.com/Snailclimb/JavaGuide/master/README.md)
+[Mockito javadoc](https://raw.githubusercontent.com/Snailclimb/JavaGuide/master/README.md):Mockito2.X版本的在线文档及案例，组件的整体细节，建议查阅在线文档。本文档整理实际测试中常用场景。
 
 ### Import Mocktio
 
@@ -67,9 +67,10 @@ public class HelloMockTest {
     }
 
 ```
-test01演示mockito的基础功能：
+test01演示mockito基础功能：
 1. mock：对List接口进行Mock，模拟出了一个mocklis对象；
 2. stub：当调用List.get(0)时，返回“Hello Mock”；
+3. verify：对目标代码的执行和结果进行验证。
 
 ### Stubbing
 
@@ -105,9 +106,12 @@ test01演示mockito的基础功能：
 
 ### Argument mathers
 
-不论stub或verify，都存在对方法中参数进行模糊或具体的匹配需求。
-如：当List.get(n)的参数n为任意数字，都返回“hello”，或当List.get()的参数n>3时抛出数组越界异常。
-此时，需要对入参有一个比对，即使用ArgumentMathers处理。
+不论stub或verify，都存在对方法中参数进行模糊或具体的匹配需求，使用ArgumentMatchers对参数进行匹配。  
+如：  
+1. 当List.get(n)的参数n为任意数字，都返回“hello”，或当List.get()的参数n>3时抛出数组越界异常。 
+2. 当方法参数的name属性值包含“java”时，返回true，否则返回false；   
+
+此时，需要对入参有一个比对，即使用ArgumentMathers处理。  
 
 单元测试类：
 ```
@@ -168,13 +172,21 @@ public class ArgumentMatherTest {
     }
 }
 
-print:
+结果打印如下:
 hello
 hello
 Thinking in java :true
 some book :false
 ```
-用例中相关类如下：
+用例中相关类：
+```
+public class BookUtil {
+    public boolean isITBook(Book book) {
+        // to do
+        return false;
+    }
+}
+```
 ```
 public class Book {
     private String name;
@@ -206,19 +218,12 @@ public class Book {
     }
 }
 ```
-
-```
-public class BookUtil {
-    public boolean isITBook(Book book) {
-        // to do
-        return false;
-    }
-}
-```
 ### Mock by annotation
-Mockito.mock()的方式可以以注解写法替代，如下：
-目标测试类为BookPrinter，运行时，注解将Mock一个Book对象，注入到BookPrinter中的book变量。
+Spring下的类通常以@Resource方式注入多个对象，测试此类时，Mockito.mock()的方式可以以注解写法替代，并完成注入，如下：  
+@InjectMocks：需要注入的类；  
+@Mock：mock并注入给InjectMocks注解的类；
 
+目标测试类为BookPrinter，运行时，注解将Mock一个Book对象，注入到BookPrinter中的book变量。    
 目标测试类：
 ```
 public class BookPrinter {
@@ -271,14 +276,92 @@ public class AnnotationMockTest {
 }
 ```
 ### Verify
-测试最终目的为验证结果正确性，mock、stub是为了解决目标测试程序对外部的依赖，verify则为验证数据而存在。
-存在几种verify的场景：
-1. 单一值验证，可直接Assert.assertEquals(结果值, 目标值)，布尔型Assert.assertTrue(结果值)；
+测试最终目的为验证结果正确性，mock、stub是为了解决目标测试程序对外部的依赖，verify则为验证数据、逻辑正确而存在。  
+常有几种verify的场景：  
+1. 方法返回单一值验证，可直接Assert.assertEquals(结果值, 目标值)，布尔型Assert.assertTrue(结果值)；
 ```
 Assert.assertEquals(5,totalPrintCount);
 ```
-2. 集合数据验证，需验证总数以及每条数据每个属性，用多个assertTrue()；
-3. 异常验证：分期望无异常、期望有异常两种情形，verify方法如下
+2. 方法返回集合数据验证，需验证总数以及每条数据每个属性，用多个assertTrue()，确保出错快速定位；
+```
+@RunWith(MockitoJUnitRunner.class)
+public class VerifyMothedTest {
+    @Test
+    public void getBooksTest01() {
+        // test data
+        Book book1 = new Book("head first in java");
+        Book book2 = new Book("thinking in java");
+        Book book3 = new Book("JAVA from beginning to giving up");
+        BookShelf shelf = new BookShelf("IT_001");
+        shelf.addBook(book1)
+             .addBook(book2)
+             .addBook(book3);
+
+        // run:test getBook() method 
+        List<Book> bookList = shelf.getBooks();
+        // 视业务情况验证属性，本例仅用name验证
+        boolean result0 = bookList.get(0).getName().equals("head first in java");
+        boolean result1 = bookList.get(1).getName().equals("thinking in java");
+        boolean result2 = bookList.get(2).getName().equals("JAVA from beginning to giving up");
+        Assert.assertTrue(result0);
+        Assert.assertTrue(result1);
+        Assert.assertTrue(result2);
+        Assert.assertEquals(3, bookList.size());
+    }
+}
+```
+如果存在集合中数据可能重复且数据的顺序不能确定的情况，最好校验一条删除一条，全部校验完毕后判断集合中再无数据，以严格的确保验证准确性。  
+```
+    @Test
+    public void getBooksTest02() {
+        // test data
+        Book book1 = new Book("thinking in java");
+        Book book2 = new Book("thinking in java");
+        Book book3 = new Book("JAVA from beginning to giving up");
+        BookShelf shelf = new BookShelf("IT_001");
+        // 假设书并不是按照放入顺序进行存储的
+        shelf.addBook(book1).addBook(book2).addBook(book3);
+
+        // run:test getBook() method
+        List<Book> bookList = shelf.getBooks();
+
+        // 期望获取3调记录
+        Assert.assertEquals(3, bookList.size());
+        boolean flag0 = true;
+        boolean flag1 = true;
+        boolean flag2 = true;
+
+        for (int i = bookList.size() - 1; i >= 0; i--) {
+            Book book = bookList.get(i);
+
+            // 视业务情况验证属性，本例仅用name验证
+            boolean result0 = flag0 && book.getName().equals("thinking in java");
+            boolean result1 = flag1 && book.getName().equals("thinking in java");
+            boolean result2 = flag2 && book.getName().equals("JAVA from beginning to giving up");
+
+            // 对验证通过的标志设置为不必验证，同时从list中删除已验证的结果
+            if (result0) {
+                flag0 = false;
+                bookList.remove(i);
+                continue;
+            }
+            if (result1) {
+                flag1 = false;
+                bookList.remove(i);
+                continue;
+            }
+            if (result2) {
+                flag2 = false;
+                bookList.remove(i);
+                continue;
+            }
+        }
+        // 如果集合中无数据，则证明全部通过了验证
+        Assert.assertEquals(0, bookList.size());
+    }
+```
+3. 异常验证：分期望无异常、期望有异常两种情形。  
+verify方法如下
 
 注：ExpectedException务必为public
 
@@ -338,9 +421,8 @@ public class ExceptionAssertTest {
 }
 ```
 
-4. 执行逻辑是调用第三方方法，则需要验证调用其方法的次数，以及传入参数；
-
-如：
+4. 有中间过程逻辑调用第三方方法，则需要验证调用其方法的次数，以及传入参数；  
+如：  
 目标测试类：
 ```
 public class BookUtil {
@@ -375,9 +457,9 @@ public class VerifyMothedTest {
         bookUtil.putBooksToShelf(shelf, bookList);
 
         // verify
-
         // the method was called 3 times total
-        Mockito.verify(shelf, Mockito.times(bookList.size())).addBook(ArgumentMatchers.any());
+        Mockito.verify(shelf, Mockito.times(bookList.size())).addBook(ArgumentMatchers.any());、
+
         Mockito.verify(shelf, Mockito.times(1)).addBook(
             ArgumentMatchers.argThat(book -> {
                 return book.getName().equals("head first in java");

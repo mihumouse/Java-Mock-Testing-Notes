@@ -12,7 +12,12 @@ public class BookShelf {
         this.bookList = new ArrayList<>();
     }
 
-    public void addBook(Book book) {
+    public BookShelf addBook(Book book) {
         bookList.add(book);
+        return this;
+    }
+
+    public List<Book> getBooks() {
+        return this.bookList;
     }
 }
