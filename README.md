@@ -1,8 +1,17 @@
 # Java-Mock-Testing-Notes
+## 目录
+- [Java-Mock-Testing-Notes](#java-mock-testing-notes)
+  - [目录](#%e7%9b%ae%e5%bd%95)
+  - [Mockito](#mockito)
+    - [Import Mocktio](#import-mocktio)
+    - [Hello Mockito](#hello-mockito)
+    - [Stubbing](#stubbing)
+    - [Argument mathers](#argument-mathers)
+    - [Mock by annotation](#mock-by-annotation)
+    - [Verify](#verify)
+## Mockito
 
-## mockito
-
-### import Mocktio
+### Import Mocktio
 
 - 通过[maven库](https://mvnrepository.com/artifact/org.mockito/mockito-core/)获取Mockito坐标。如：
 ```
@@ -26,7 +35,7 @@
 </dependency>
 ```
 
-### Hello Mock
+### Hello Mockito
 
 ```
 import java.util.List;
@@ -267,7 +276,9 @@ Assert.assertEquals(5,totalPrintCount);
 ```
 2. 集合数据验证，需验证总数以及每条数据每个属性，用多个assertTrue()；
 3. 异常验证：分期望无异常、期望有异常两种情形，verify方法如下
+
 注：ExpectedException务必为public
+
 目标测试类：
 ```
 public class Book {
@@ -325,6 +336,7 @@ public class ExceptionAssertTest {
 ```
 
 4. 执行逻辑是调用第三方方法，则需要验证调用其方法的次数，以及传入参数；
+
 如：
 目标测试类：
 ```
@@ -354,10 +366,13 @@ public class VerifyMothedTest {
         Book book3 = new Book("JAVA from beginning to end");
         List<Book> bookList = Lists.newArrayList(book1, book2, book3);
         BookShelf shelf = Mockito.mock(BookShelf.class);
+
         // run target method
         BookUtil bookUtil = new BookUtil();
         bookUtil.putBooksToShelf(shelf, bookList);
+
         // verify
+
         // the method was called 3 times total
         Mockito.verify(shelf, Mockito.times(bookList.size())).addBook(ArgumentMatchers.any());
         Mockito.verify(shelf, Mockito.times(1)).addBook(
