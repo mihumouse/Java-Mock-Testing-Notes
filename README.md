@@ -9,6 +9,9 @@
     - [Argument mathers](#argument-mathers)
     - [Mock by annotation](#mock-by-annotation)
     - [Verify](#verify)
+    - [Spy](#spy)
+    - [In Order](#in-order)
+  - [PowerMockito](#powermockito)
 ## Mockito
 ![image text](https://raw.githubusercontent.com/mihumouse/Java-Mock-Testing-Notes/master/media/img/mockito%40logo%402x.png)
 
@@ -360,9 +363,7 @@ public class VerifyMothedTest {
         Assert.assertEquals(0, bookList.size());
     }
 ```
-3. 异常验证：分期望无异常、期望有异常两种情形。  
-verify方法如下
-
+3. 异常验证：分期望无异常、期望有异常两种情形。verify方法如下:  
 注：ExpectedException务必为public
 
 目标测试类：
@@ -475,3 +476,114 @@ public class VerifyMothedTest {
     }
 }
 ```
+### Spy
+ 当依赖的类真的需要执行时，如不想stub造数据或某段代码为历史遗留代码，那可以用Spy方式“真调用”。  
+ - spy后，默认为真调用，但也可以stub;  
+ - 需要使用spy后的对象，而不能使用原对象；
+ - spy需要谨慎使用，不应该经常用到。
+ ```
+@RunWith(MockitoJUnitRunner.class)
+public class SpyTest {
+
+    @Test
+    public void spyTest() {
+        List list = new LinkedList();
+        // with spy, calls "real" methods
+        List spy = Mockito.spy(list);
+
+        // you can stub out some methods:
+        Mockito.when(spy.size()).thenReturn(100);
+
+        // using the spy calls "real" methods
+        spy.add("one");
+        spy.add("two");
+
+        // prints "one" - the first element of a list
+        System.out.println(spy.get(0));
+
+        // size() method was stubbed - 100 is printed
+        System.out.println(spy.size());
+
+        // optionally, you can verify
+        Mockito.verify(spy).add("one");
+        Mockito.verify(spy).add("two");
+    }
+}
+ ```
+
+### In Order
+当期望目标测试逻辑存在时序需求时，需要用InOrder进行验证。  
+如：验证打印顺序是否正确。  
+目标测试类：
+```
+public class BookPrinter {
+    @Resource
+    Book book;
+
+    /**
+     * print content between startPageNum and endPageNum
+     * @param beginPageNum 
+     * @param endPageNum
+     * @return total print count
+     */
+    public int printByPage(int beginPageNum, int endPageNum) {
+        int totalPrintCount = 0;
+        int printNum = beginPageNum;
+        while(printNum <= endPageNum) {
+            print(book.getContentByPage(printNum));
+            printNum++;
+            totalPrintCount++;
+        }
+        return totalPrintCount;
+    }
+
+    private void print(String content) {
+        System.out.println(content);
+    }
+}
+```
+
+```
+public class Book {
+    private String name;
+    private String auther;
+    private String publishDate;
+    private Object content;
+    private int pageNum;
+    
+    public String getContentByPage(int pageNum) {
+        // to do
+        return "some content";
+    }
+    ....
+```
+单元测试类
+
+```
+@RunWith(MockitoJUnitRunner.class)
+public class InOrderTest {
+
+    @InjectMocks
+    BookPrinter bookPrinter;
+    
+    @Mock
+    Book book;
+    
+    @Test
+    public void printByPageTest01() {
+        // 打印第1-5页
+        bookPrinter.printByPage(1, 5);
+
+        // 验证打印时按照1、2、3、4、5页的顺序获取内容
+        InOrder inOrder = Mockito.inOrder(book);
+        inOrder.verify(book).getContentByPage(1);
+        inOrder.verify(book).getContentByPage(2);
+        inOrder.verify(book).getContentByPage(3);
+        inOrder.verify(book).getContentByPage(4);
+        inOrder.verify(book).getContentByPage(5);
+
+    }
+}
+```
+ ## PowerMockito
+ 
