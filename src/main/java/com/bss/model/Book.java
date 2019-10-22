@@ -7,6 +7,13 @@ public class Book {
     private Object content;
     private int pageNum;
 
+    public Book() {
+    }
+
+    public Book(String name) {
+        this.name = name;
+    }
+
     public int getPageNum() {
         return pageNum;
     }

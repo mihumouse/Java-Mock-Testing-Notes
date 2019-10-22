@@ -97,6 +97,7 @@ test01演示mockito的基础功能：
 如：当List.get(n)的参数n为任意数字，都返回“hello”，或当List.get()的参数n>3时抛出数组越界异常。
 此时，需要对入参有一个比对，即使用ArgumentMathers处理。
 
+单元测试类：
 ```
 @RunWith(MockitoJUnitRunner.class)
 public class ArgumentMatherTest {
@@ -161,7 +162,7 @@ hello
 Thinking in java :true
 some book :false
 ```
-
+用例中相关类如下：
 ```
 public class Book {
     private String name;
@@ -206,29 +207,7 @@ public class BookUtil {
 Mockito.mock()的方式可以以注解写法替代，如下：
 目标测试类为BookPrinter，运行时，注解将Mock一个Book对象，注入到BookPrinter中的book变量。
 
-```
-@RunWith(MockitoJUnitRunner.class)
-public class AnnotationMockTest {
-    // target test class
-    @InjectMocks
-    BookPrinter bookPrinter;
-
-    // target mock class
-    @Mock
-    Book book;
-
-    @Test
-    public void testBookPrinter01() {
-        // stub
-        Mockito.when(book.getContentByPage(anyInt())).thenReturn("page content");
-        // run
-        int totalPrintCount = bookPrinter.printByPage(1, 5);
-        // verify
-        Assert.assertEquals(5,totalPrintCount);
-    }
-}
-```
-BookPrinter类：
+目标测试类：
 ```
 public class BookPrinter {
     @Resource
@@ -256,6 +235,29 @@ public class BookPrinter {
     }
 }
 ```
+单元测试类：
+```
+@RunWith(MockitoJUnitRunner.class)
+public class AnnotationMockTest {
+    // target test class
+    @InjectMocks
+    BookPrinter bookPrinter;
+
+    // target mock class
+    @Mock
+    Book book;
+
+    @Test
+    public void testBookPrinter01() {
+        // stub
+        Mockito.when(book.getContentByPage(anyInt())).thenReturn("page content");
+        // run
+        int totalPrintCount = bookPrinter.printByPage(1, 5);
+        // verify
+        Assert.assertEquals(5,totalPrintCount);
+    }
+}
+```
 ### Verify
 测试最终目的为验证结果正确性，mock、stub是为了解决目标测试程序对外部的依赖，verify则为验证数据而存在。
 存在几种verify的场景：
@@ -266,7 +268,27 @@ Assert.assertEquals(5,totalPrintCount);
 2. 集合数据验证，需验证总数以及每条数据每个属性，用多个assertTrue()；
 3. 异常验证：分期望无异常、期望有异常两种情形，verify方法如下
 注：ExpectedException务必为public
+目标测试类：
+```
+public class Book {
+    private String name;
+    private String auther;
+    private String publishDate;
+    private Object content;
+    private int pageNum;
 
+    /**
+     * book's page number must greater than 0
+     */
+    public void setPageNum(int pageNum) {
+        if(pageNum <= 0) {
+            throw new IllegalArgumentException("the page number must greater than 0");
+        }
+        this.pageNum = pageNum;
+    }
+    ......
+```
+单元测试类：
 ```
 @RunWith(MockitoJUnitRunner.class)
 public class ExceptionAssertTest {
@@ -301,26 +323,55 @@ public class ExceptionAssertTest {
     }
 }
 ```
-```
-public class Book {
-    private String name;
-    private String auther;
-    private String publishDate;
-    private Object content;
-    private int pageNum;
 
-    public int getPageNum() {
-        return pageNum;
-    }
-    /**
-     * book's page number must greater than 0
-     */
-    public void setPageNum(int pageNum) {
-        if(pageNum <= 0) {
-            throw new IllegalArgumentException("the page number must greater than 0");
-        }
-        this.pageNum = pageNum;
-    }
-    ......
-```
 4. 执行逻辑是调用第三方方法，则需要验证调用其方法的次数，以及传入参数；
+如：
+目标测试类：
+```
+public class BookUtil {
+    /**
+     * put all books into shelf
+     * @param shelf    shelf
+     * @param bookList books
+     */
+    public void putBooksToShelf(BookShelf shelf, List<Book> bookList) {
+        for (Book book : bookList) {
+            shelf.addBook(book);
+        }
+    }
+    ....
+}
+```
+单元测试类:
+```
+public class VerifyMothedTest {
+    
+    @Test
+    public void putBooksToShelfTest01() {
+        // test data
+        Book book1 = new Book("head first in java");
+        Book book2 = new Book("thinking in java");
+        Book book3 = new Book("JAVA from beginning to end");
+        List<Book> bookList = Lists.newArrayList(book1, book2, book3);
+        BookShelf shelf = Mockito.mock(BookShelf.class);
+        // run target method
+        BookUtil bookUtil = new BookUtil();
+        bookUtil.putBooksToShelf(shelf, bookList);
+        // verify
+        // the method was called 3 times total
+        Mockito.verify(shelf, Mockito.times(bookList.size())).addBook(ArgumentMatchers.any());
+        Mockito.verify(shelf, Mockito.times(1)).addBook(
+            ArgumentMatchers.argThat(book -> {
+                return book.getName().equals("head first in java");
+            }));
+        Mockito.verify(shelf, Mockito.times(1)).addBook(
+            ArgumentMatchers.argThat(book -> {
+                return book.getName().equals("thinking in java");
+            }));
+        Mockito.verify(shelf, Mockito.times(1)).addBook(
+            ArgumentMatchers.argThat(book -> {
+                return book.getName().equals("JAVA from beginning to end");
+            }));
+    }
+}
+```
