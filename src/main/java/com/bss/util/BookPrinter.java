@@ -15,17 +15,37 @@ public class BookPrinter {
      * @return total print count
      */
     public int printByPage(int beginPageNum, int endPageNum) {
+        // total page
         int totalPrintCount = 0;
+        // total words
+        int totalWords = 0; 
+
         int printNum = beginPageNum;
         while(printNum <= endPageNum) {
-            print(book.getContentByPage(printNum));
+            String currentPageContent = book.getContentByPage(printNum);
+            print(currentPageContent);
             printNum++;
             totalPrintCount++;
+            totalWords += getNumberOfWords(currentPageContent);
         }
+        System.out.println("total words:" + totalWords);
         return totalPrintCount;
     }
-
+    
+    /**
+     * count the words number of the content
+     * @param content content
+     * @return total number
+     */
+    private int getNumberOfWords(String content) {
+        return null == content? 0 : content.split(" ").length;
+    }
+    
+    /**
+     * print content
+     */
     private void print(String content) {
         System.out.println(content);
     }
+    
 }

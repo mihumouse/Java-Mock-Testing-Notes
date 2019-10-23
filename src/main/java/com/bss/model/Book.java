@@ -30,6 +30,9 @@ public class Book {
     
     public String getContentByPage(int pageNum) {
         // to do
+        if(pageNum > 1) {
+            throw new NullPointerException();
+        }
         return "some content";
     }
     

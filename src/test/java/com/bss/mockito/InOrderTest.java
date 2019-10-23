@@ -1,4 +1,4 @@
-package com.bss;
+package com.bss.mockito;
 
 import com.bss.model.Book;
 import com.bss.util.BookPrinter;

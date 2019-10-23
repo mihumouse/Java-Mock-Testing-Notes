@@ -1,4 +1,4 @@
-package com.bss;
+package com.bss.mockito;
 
 import static org.mockito.ArgumentMatchers.anyInt;
 

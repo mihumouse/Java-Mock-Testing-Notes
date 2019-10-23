@@ -1,9 +1,10 @@
 # Java-Mock-Testing-Notes
+Mock测试解决的问题：构建模拟类，避免测试依赖外部类；构造期望数据，方便用例数据产生；提供验证机制，简化运行结果核对。  
 ## 目录
 - [Java-Mock-Testing-Notes](#java-mock-testing-notes)
   - [目录](#%e7%9b%ae%e5%bd%95)
   - [Mockito](#mockito)
-    - [Import Mocktio](#import-mocktio)
+    - [Setup Mocktio](#setup-mocktio)
     - [Hello Mockito](#hello-mockito)
     - [Stubbing](#stubbing)
     - [Argument mathers](#argument-mathers)
@@ -12,12 +13,15 @@
     - [Spy](#spy)
     - [In Order](#in-order)
   - [PowerMockito](#powermockito)
+    - [Setup PowerMock](#setup-powermock)
+    - [call private method](#call-private-method)
+    - [stubbing](#stubbing)
 ## Mockito
 ![image text](https://raw.githubusercontent.com/mihumouse/Java-Mock-Testing-Notes/master/media/img/mockito%40logo%402x.png)
 
 [Mockito javadoc](https://raw.githubusercontent.com/Snailclimb/JavaGuide/master/README.md):Mockito2.X版本的在线文档及案例，组件的整体细节，建议查阅在线文档。本文档整理实际测试中常用场景。
 
-### Import Mocktio
+### Setup Mocktio
 
 - 通过[maven库](https://mvnrepository.com/artifact/org.mockito/mockito-core/)获取Mockito坐标。如：
 ```
@@ -586,4 +590,135 @@ public class InOrderTest {
 }
 ```
  ## PowerMockito
- 
+ PowerMockito扩展了Mockito的短板，使用字节码操作（Mockito主要为代理机制），实现了private、static、final等方法的调用。  
+ ### Setup PowerMock
+ 同Mockito方式获取坐标。由于PowerMockito会调用Mockito内部API，需注意两个组件见的版本兼容性。
+ ```
+     <dependency>
+        <groupId>org.powermock</groupId>
+        <artifactId>powermock-module-junit4</artifactId>
+        <version>2.0.2</version>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.powermock</groupId>
+        <artifactId>powermock-api-mockito2</artifactId>
+        <version>2.0.2</version>
+        <scope>test</scope>
+    </dependency>
+ ```
+
+### call private method
+当业务类中抽取了private方法时，使用Mockito无法执行，需要借助PowerMockito。  
+如下类，包含一个统计字符串中字数的私有方法，在单元测试中，应单独设计用例测试：    
+```
+public class BookPrinter {
+    ...    
+    /**
+     * count the words number of the content
+     * @param content content
+     * @return total number
+     */
+    private int getNumberOfWords(String content) {
+        return null == content? 0 : content.split(" ").length;
+    }
+    ...
+}
+```
+单元测试类：  
+注：@RunWith(PowerMockRunner.class)、@RunWith(MockitoJUnitRunner.class) 在此均可正常运行，必须用MockitoJUnitRunner的后续说明。  
+```
+// @RunWith(PowerMockRunner.class)
+@RunWith(MockitoJUnitRunner.class)
+public class PrivateMethodTest {
+    @InjectMocks
+    BookPrinter bookPrinter;
+
+    @Test
+    public void getNumberOfWordsTest01()
+            throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+
+        // test the private method of BookPrinter with 'PowerMockito.method'
+        Method method = PowerMockito.method(BookPrinter.class, "getNumberOfWords", String.class);
+
+        // run the 'method' with reflect way, and got the return
+        int wordsNumber = (int)method.invoke(bookPrinter, "Far far away, there is a hero names MZJ");
+
+        // verify as before
+        Assert.assertEquals(9, wordsNumber);
+    }
+}
+```
+为简化上述使用，可建立单元测试公共工具方法，如下：  
+注：方法不支持参数传null
+```
+public class MockUtil {
+
+    /**
+     * common method of calling private method
+     * @param <T>         target test class
+     * @param instance    target test instance of class
+     * @param methodName  tartet private method
+     * @param paras       parameters of the private method
+     * @return private method's return
+     */
+    public static <T extends Object> Object runPrivateMethod(T instance, String methodName, Object... paras) {
+        Class[] paraTypes = new Class[paras.length];
+        for (int i = 0; i < paras.length; i++) {
+            paraTypes[i] = paras[i].getClass();
+        }
+
+        Class clazz = instance.getClass();
+        Method method = PowerMockito.method(clazz, methodName, paraTypes);
+        
+        Object returnObj = null;
+        try {
+            returnObj = method.invoke(instance, paras);
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            // 反射后抛出异常，mock机制无法判断，处理再抛出
+            try {
+                throw e.getCause();
+            } catch (Throwable e1) {
+                e1.printStackTrace();
+            }
+        }
+        return returnObj;
+    }
+}
+```
+### stubbing
+与Mockito异曲同工，稍有差异，同样扩展了私有方法的支持。  
+stub埋有一处坑：PowerMock提供了两种stub方式：doReturn...when...，when...thenReturn...  
+当对象为mock时，stub的方法均不会被真正调用代码，当采用的spy方式时：  
+1.doReturn...when...：不会实际调用方法；
+2.when...thenReturn...：会实际调用方法，但是会按照stub的设置的返回值返回数据，而不因执行了代码而返回代码运行结果。
+
+```
+@RunWith(MockitoJUnitRunner.class)
+public class StubbingTest {
+    @InjectMocks
+    BookPrinter bookPrinter;
+
+    @Spy
+    Book book;
+
+    @Test
+    public void testStubbing01() throws Exception {
+        // stub
+
+        // with the 'doReturn...when...' way, the method will not be actually call 
+        // PowerMockito.doReturn("some content").when(book, "getContentByPage", ArgumentMatchers.anyInt());
+
+        // with the 'when...thenReturn...' way, the method will be actually call 
+        PowerMockito.when(book, "getContentByPage", ArgumentMatchers.anyInt()).thenReturn("some content");
+
+        // run
+        bookPrinter.printByPage(1, 5);
+
+        // verify
+        Mockito.verify(book, Mockito.times(5)).getContentByPage(ArgumentMatchers.anyInt());
+    }
+}
+```
