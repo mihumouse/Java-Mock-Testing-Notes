@@ -16,6 +16,10 @@ Mock测试解决的问题：构建模拟类，避免测试依赖外部类；构�
     - [Setup PowerMock](#setup-powermock)
     - [call private method](#call-private-method)
     - [stubbing](#stubbing)
+    - [Verify](#verify-1)
+    - [the annotation @PrepareForTest](#the-annotation-preparefortest)
+    - [RunWith](#runwith)
+  - [some summary of unit testing](#some-summary-of-unit-testing)
 ## Mockito
 ![image text](https://raw.githubusercontent.com/mihumouse/Java-Mock-Testing-Notes/master/media/img/mockito%40logo%402x.png)
 
@@ -692,8 +696,8 @@ public class MockUtil {
 与Mockito异曲同工，稍有差异，同样扩展了私有方法的支持。  
 stub埋有一处坑：PowerMock提供了两种stub方式：doReturn...when...，when...thenReturn...  
 当对象为mock时，stub的方法均不会被真正调用代码，当采用的spy方式时：  
-1.doReturn...when...：不会实际调用方法；
-2.when...thenReturn...：会实际调用方法，但是会按照stub的设置的返回值返回数据，而不因执行了代码而返回代码运行结果。
+- doReturn...when...：不会实际调用方法；
+- when...thenReturn...：会实际调用方法，但是会按照stub的设置的返回值返回数据，而不因执行了代码而返回代码运行结果。
 
 ```
 @RunWith(MockitoJUnitRunner.class)
@@ -722,3 +726,94 @@ public class StubbingTest {
     }
 }
 ```
+### Verify
+verify上同Mockito仍是异曲同工，略有不同。如私有的verify：
+
+单元测试类：  
+测试bookPrinter打印1至5页，调用了自有的私有print(anyIt()))方法5次。  
+当然，也可以校验调用了1次print(1)、1次print(2)……更为严谨。
+```
+@RunWith(MockitoJUnitRunner.class)
+public class VerifyMethodTest {
+    @InjectMocks
+    BookPrinter bookPrinter;
+    
+    @Mock
+    Book book;
+    
+    @Test
+    public void printByPage01() throws Exception {
+        // stub
+        Mockito.when(book.getContentByPage(Mockito.anyInt())).thenReturn("some content");
+        
+        // run
+        bookPrinter.printByPage(1, 5);
+
+        // verify: wibll throw NotAMockException, because the bookPrinter is not a mock
+        PowerMockito.verifyPrivate(bookPrinter, Mockito.times(5)).invoke("print", Mockito.anyString());
+    }
+}
+```
+上段代码编译无问题，但执行会抛出异常：  
+```
+org.mockito.exceptions.misusing.NotAMockException: 
+Argument passed to verify() is of type BookPrinter and is not a mock!
+Make sure you place the parenthesis correctly!
+```
+此处引出一个mock原理的讨论：不论stub、verify，关键在于目标对象是经Mockito\PowerMockito构建出来的对象，构建形式可以是spy或mock，只有它构建出来的，它才会有“监视”的可能，从而实现stub、verify的目的。  
+spy后的的单元测试类：
+```
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({BookPrinter.class})
+public class VerifyMethodTest {
+    @InjectMocks
+    BookPrinter bookPrinter;
+    
+    @Mock
+    Book book;
+
+    @Test
+    public void printByPage02() throws Exception {
+        // wrap the class by spy
+        BookPrinter spy = PowerMockito.spy(bookPrinter);
+
+        // stub
+        Mockito.when(book.getContentByPage(Mockito.anyInt())).thenReturn("some content");
+        
+        // run
+        spy.printByPage(1, 5);
+
+        // verify
+        PowerMockito.verifyPrivate(spy, Mockito.times(5)).invoke("print", Mockito.anyString());
+    }
+}
+```
+### the annotation @PrepareForTest
+Verify代码有一处类注解（见VerifyMethodTest.printByPage02()用例）——@PrepareForTest({BookPrinter.class})  
+该注解在PowerMockito中扩展测试final、private、static方法起主要作用，可谓欲测private，必先PrepareForTest。  
+说白了就是增加此注解，测试用例执行前，会将注解中的class提前摸底，搞清楚都有什么方法，便于后续执行。  
+忘记添加，会报：
+```
+Stack trace:
+org.mockito.exceptions.misusing.UnfinishedVerificationException: 
+Missing method call for verify(mock) here:
+-> at com.bss.powermockito.VerifyMethodTest.printByPage02(VerifyMethodTest.java:50)
+Example of correct verification:
+    verify(mock).doSomething()
+Also, this error might show up because you verify either of: final/private/equals()/hashCode() methods.
+Those methods *cannot* be stubbed/verified.
+Mocking methods declared on non-public parent classes is not supported.
+```
+
+### RunWith
+关于测试的执行器，@RunWith(PowerMockRunner.class)、@RunWith(MockitoJUnitRunner.class)的选用，建议优先使用MockitoJUnitRunner。  
+MockitoJUnitRunner已经可满足大多数场景，很多时候是由于类设计的不合理，倒逼你使用PowerMockRunner进行静态资源的测试，且容易出现莫名的问题。
+
+## some summary of unit testing
+- 功能函数职能单一，复杂业务按行为单元拆分多个子方法，逐个子方法测试，清晰业务、简化用例复杂度、易于达到覆盖度；
+- 用例函数职能单一，避免单用例覆盖多个场景，人工增加用例复杂度和后期运维成本； 
+- 断言职能单一，确保测试程序执行时，能快速定位哪个预期结果存在问题；
+- 用例注释完备，体现测试的场景、目的及期望结果，便于后续清晰理解用例用意；
+- 用例命名：com.dce.BusiClass.methodName()类的测试类及方法应为对应test目录的com.dce.BusiClassTest.methodNameTest01()、methodNameTest02()、methodNameTest03()等；
+- 用例代码基本顺序：data -> stub -> run -> verify
+- 不论任何覆盖度级别，用例达到覆盖度无法保证业务测试充分，测试质量最终依赖对需求的理解和完善的用例(极值等特殊场景)；
