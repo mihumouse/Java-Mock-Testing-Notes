@@ -17,8 +17,8 @@ Mock测试解决的问题：构建模拟类，避免测试依赖外部类；构�
     - [test private method](#test-private-method)
     - [stubbing](#stubbing)
     - [Verify](#verify-1)
-    - [Abount @PrepareForTest](#abount-preparefortest)
-    - [Abount @RunnWith](#abount-runnwith)
+    - [About @PrepareForTest](#about-preparefortest)
+    - [About @RunnWith](#about-runnwith)
   - [some summary of unit testing](#some-summary-of-unit-testing)
 ## Mockito
 ![image text](https://raw.githubusercontent.com/mihumouse/Java-Mock-Testing-Notes/master/media/img/mockito%40logo%402x.png)
@@ -783,7 +783,7 @@ public class VerifyMethodTest {
     }
 }
 ```
-### Abount @PrepareForTest
+### About @PrepareForTest
 Verify代码有一处类注解（见VerifyMethodTest.printByPage02()用例）——@PrepareForTest({BookPrinter.class})  
 该注解在PowerMockito中扩展测试final、private、static方法起主要作用，可谓欲测private，必先PrepareForTest。  
 说白了就是增加此注解，测试用例执行前，会将注解中的class提前摸底，搞清楚都有什么方法，便于后续执行。  
@@ -800,7 +800,7 @@ Those methods *cannot* be stubbed/verified.
 Mocking methods declared on non-public parent classes is not supported.
 ```
 
-### Abount @RunnWith
+### About @RunnWith
 关于测试的执行器，@RunWith(PowerMockRunner.class)、@RunWith(MockitoJUnitRunner.class)的选用，建议优先使用MockitoJUnitRunner。  
 MockitoJUnitRunner已经可满足大多数场景，很多时候是由于类设计的不合理，倒逼你使用PowerMockRunner进行静态资源的测试，且容易出现莫名的问题。
 
