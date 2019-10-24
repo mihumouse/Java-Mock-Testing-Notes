@@ -24,7 +24,10 @@ public class VerifyMothedTest {
         Book book2 = new Book("thinking in java");
         Book book3 = new Book("JAVA from beginning to giving up");
         List<Book> bookList = Lists.newArrayList(book1, book2, book3);
+
+        // mock
         BookShelf shelf = Mockito.mock(BookShelf.class);
+        
         // run target method
         BookUtil bookUtil = new BookUtil();
         bookUtil.putBooksToShelf(shelf, bookList);

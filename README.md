@@ -14,7 +14,7 @@ Mock测试解决的问题：构建模拟类，避免测试依赖外部类；构�
     - [In Order](#in-order)
   - [PowerMockito](#powermockito)
     - [Setup PowerMock](#setup-powermock)
-    - [call private method](#call-private-method)
+    - [test private method](#test-private-method)
     - [stubbing](#stubbing)
     - [Verify](#verify-1)
     - [Abount @PrepareForTest](#abount-preparefortest)
@@ -23,7 +23,7 @@ Mock测试解决的问题：构建模拟类，避免测试依赖外部类；构�
 ## Mockito
 ![image text](https://raw.githubusercontent.com/mihumouse/Java-Mock-Testing-Notes/master/media/img/mockito%40logo%402x.png)
 
-[Mockito javadoc](https://raw.githubusercontent.com/Snailclimb/JavaGuide/master/README.md):Mockito2.X版本的在线文档及案例，组件的整体细节，建议查阅在线文档。本文档整理实际测试中常用场景。
+[Mockito javadoc online](https://raw.githubusercontent.com/Snailclimb/JavaGuide/master/README.md)：Mockito2.X版本的在线文档及案例，组件的整体细节，建议查阅在线文档。本文档整理实际测试中常用场景。
 
 ### Setup Mocktio
 
@@ -78,21 +78,26 @@ public class HelloMockTest {
     }
 
 ```
-test01演示mockito基础功能：
+mockito基础功能：
 1. mock：对List接口进行Mock，模拟出了一个mocklis对象；
 2. stub：当调用List.get(0)时，返回“Hello Mock”；
-3. verify：对目标代码的执行和结果进行验证。
+3. verify：对目标代码的执行和结果进行验证。  
+
+后续进行各项详述。
 
 ### Stubbing
 
 所谓stub，即使用“桩代码”替换目标测试类依赖的代码或未被实现的代码，目的：
-- [x] 隔离：确保测试不依赖外部类，不受外部类影响；
-- [x] 补缺：对未实现的代码，通过桩代码“实现”；
-- [x] 控制：通过桩代码提供测试过程中所需的数据；
+- 隔离：确保测试不依赖外部类，不受外部类影响；
+- 补缺：对未实现的代码，通过桩代码“实现”；
+- 控制：通过桩代码提供测试过程中所需的数据。
 
 
 ```
-    public static void testStubbing01() {
+@RunWith(MockitoJUnitRunner.class)
+public class StubbingTest {
+    @Test
+    public void testStubbing01() {
         List mockList = Mockito.mock(List.class);
         // stub        
         Mockito.when(mockList.get(0)).thenReturn("the first");
@@ -103,12 +108,13 @@ test01演示mockito基础功能：
         System.out.println(mockList.get(0));
         // print null
         System.out.println(mockList.get(2));
-
+        
         Mockito.when(mockList.get(3)).thenReturn("the third");
         Mockito.when(mockList.get(3)).thenThrow(new NullPointerException());
         // throw exception
         System.out.println(mockList.get(3));
     }
+}
 ```
 - 打桩可以根据参数值返回具体值，也可抛出异常；
 - 同一条件，打多次桩，以最后一次为准；
@@ -120,9 +126,34 @@ test01演示mockito基础功能：
 不论stub或verify，都存在对方法中参数进行模糊或具体的匹配需求，使用ArgumentMatchers对参数进行匹配。  
 如：  
 1. 当List.get(n)的参数n为任意数字，都返回“hello”，或当List.get()的参数n>3时抛出数组越界异常。 
-2. 当方法参数的name属性值包含“java”时，返回true，否则返回false；   
+2. 当BookUtil.isITBook(String name)的参数的name属性值包含“java”时，返回true，否则返回false；   
 
-此时，需要对入参有一个比对，即使用ArgumentMathers处理。  
+此时，需要对入参有一个匹配行为，即使用ArgumentMathers。  
+
+目标测试类：
+```
+public class BookUtil {
+    public boolean isITBook(Book book) {
+        // to do
+        return false;
+    }
+}
+
+public class Book {
+    private String name;
+    private String auther;
+    private String publishDate;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+    ...
+}
+```
 
 单元测试类：
 ```
@@ -130,10 +161,10 @@ test01演示mockito基础功能：
 public class ArgumentMatherTest {
 
     /**
-     * try a ArgumentMatchers01
-     * for List
+     * try a ArgumentMatchers for List
      */
-    public static void testArgumentMather01() {
+    @Test
+    public void testArgumentMather01() {
         List list = Mockito.mock(List.class);
 
         // any int value return "hello"
@@ -155,7 +186,8 @@ public class ArgumentMatherTest {
      * try a ArgumentMatchers
      * stub BookUtil.isITBook()，if Book's name contains "java", return "true"
      */
-    public static void testArgumentMather02() {
+    @Test
+    public void testArgumentMather02() {
         BookUtil bookUtil = Mockito.mock(BookUtil.class);
         
         Mockito.when(bookUtil.isITBook(ArgumentMatchers.argThat(book -> {
@@ -166,7 +198,7 @@ public class ArgumentMatherTest {
             }
         }))).thenReturn(true);
         
-        // 不能同时用两个ArgumentMatchers
+        // Don't use more than one ArgumentMatchers on the same method like this
         // Mockito.when(bookUtil.isITBook(ArgumentMatchers.any())).thenReturn(false);
 
         Book book1 = new Book();
@@ -176,62 +208,19 @@ public class ArgumentMatherTest {
         book2.setName("some book");
         System.out.println(book2.getName() + " :" + bookUtil.isITBook(book2));
     }
-
-    public static void main(String [] args) {
-        testArgumentMather01();
-        testArgumentMather02();
-    }
 }
 
 结果打印如下:
 hello
 hello
+-------------------
 Thinking in java :true
 some book :false
 ```
-用例中相关类：
-```
-public class BookUtil {
-    public boolean isITBook(Book book) {
-        // to do
-        return false;
-    }
-}
-```
-```
-public class Book {
-    private String name;
-    private String auther;
-    private String publishDate;
 
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getAuther() {
-        return auther;
-    }
-
-    public void setAuther(String auther) {
-        this.auther = auther;
-    }
-
-    public String getPublishDate() {
-        return publishDate;
-    }
-
-    public void setPublishDate(String publishDate) {
-        this.publishDate = publishDate;
-    }
-}
-```
 ### Mock by annotation
-Spring下的类通常以@Resource方式注入多个对象，测试此类时，Mockito.mock()的方式可以以注解写法替代，并完成注入，如下：  
-@InjectMocks：需要注入的类；  
+业务开发中，Spring下的类通常以@Resource方式注入多个对象，测试此类时，Mockito.mock()的方式可以以注解写法替代，并完成注入，如下：  
+@InjectMocks：被注入的类、需测试的类；  
 @Mock：mock并注入给InjectMocks注解的类；
 
 目标测试类为BookPrinter，运行时，注解将Mock一个Book对象，注入到BookPrinter中的book变量。    
@@ -288,7 +277,8 @@ public class AnnotationMockTest {
 ```
 ### Verify
 测试最终目的为验证结果正确性，mock、stub是为了解决目标测试程序对外部的依赖，verify则为验证数据、逻辑正确而存在。  
-常有几种verify的场景：  
+单元测试大致有几种结果验证的场景，直接的数据验证，不需使用Mockito的verify API，逻辑的验证则需要。  
+常用场景： 
 1. 方法返回单一值验证，可直接Assert.assertEquals(结果值, 目标值)，布尔型Assert.assertTrue(结果值)；
 ```
 Assert.assertEquals(5,totalPrintCount);
@@ -430,7 +420,7 @@ public class ExceptionAssertTest {
 }
 ```
 
-4. 有中间过程逻辑调用第三方方法，则需要验证调用其方法的次数，以及传入参数；  
+4. 有中间过程逻辑调用其他方法，则需要验证调用其方法的次数，以及传入参数，使用Mockito的verify的API；  
 如：  
 目标测试类：
 ```
@@ -459,6 +449,8 @@ public class VerifyMothedTest {
         Book book2 = new Book("thinking in java");
         Book book3 = new Book("JAVA from beginning to end");
         List<Book> bookList = Lists.newArrayList(book1, book2, book3);
+
+        // mock
         BookShelf shelf = Mockito.mock(BookShelf.class);
 
         // run target method
@@ -485,10 +477,10 @@ public class VerifyMothedTest {
 }
 ```
 ### Spy
- 当依赖的类真的需要执行时，如不想stub造数据或某段代码为历史遗留代码，那可以用Spy方式“真调用”。  
+ 当依赖的类真的需要执行时，如：不想stub造数据或某段代码为历史遗留代码，那可以用Spy方式“真调用”。  
  - spy后，默认为真调用，但也可以stub;  
  - 需要使用spy后的对象，而不能使用原对象；
- - spy需要谨慎使用，不应该经常用到。
+ - spy需要谨慎使用，不应该经常用到spy。
  ```
 @RunWith(MockitoJUnitRunner.class)
 public class SpyTest {
@@ -499,7 +491,7 @@ public class SpyTest {
         // with spy, calls "real" methods
         List spy = Mockito.spy(list);
 
-        // you can stub out some methods:
+        // you can stub some method which you don't want spy
         Mockito.when(spy.size()).thenReturn(100);
 
         // using the spy calls "real" methods
@@ -509,7 +501,7 @@ public class SpyTest {
         // prints "one" - the first element of a list
         System.out.println(spy.get(0));
 
-        // size() method was stubbed - 100 is printed
+        // because 'size()' was stubbed, so 100 is printed
         System.out.println(spy.size());
 
         // optionally, you can verify
@@ -579,10 +571,10 @@ public class InOrderTest {
     
     @Test
     public void printByPageTest01() {
-        // 打印第1-5页
+        // wanted:print from 1 to 5
         bookPrinter.printByPage(1, 5);
 
-        // 验证打印时按照1、2、3、4、5页的顺序获取内容
+        // verify: in 1 2 3 4 5 order
         InOrder inOrder = Mockito.inOrder(book);
         inOrder.verify(book).getContentByPage(1);
         inOrder.verify(book).getContentByPage(2);
@@ -612,7 +604,7 @@ public class InOrderTest {
     </dependency>
  ```
 
-### call private method
+### test private method
 当业务类中抽取了private方法时，使用Mockito无法执行，需要借助PowerMockito。  
 如下类，包含一个统计字符串中字数的私有方法，在单元测试中，应单独设计用例测试：    
 ```
@@ -681,7 +673,6 @@ public class MockUtil {
         } catch (IllegalAccessException e) {
             e.printStackTrace();
         } catch (InvocationTargetException e) {
-            // 反射后抛出异常，mock机制无法判断，处理再抛出
             try {
                 throw e.getCause();
             } catch (Throwable e1) {
@@ -694,10 +685,13 @@ public class MockUtil {
 ```
 ### stubbing
 与Mockito异曲同工，稍有差异，同样扩展了私有方法的支持。  
-stub埋有一处坑：PowerMock提供了两种stub方式：doReturn...when...，when...thenReturn...  
+stub有一处坑：PowerMock提供了两种stub方式：doReturn...when...，when...thenReturn...  
 当对象为mock时，stub的方法均不会被真正调用代码，当采用的spy方式时：  
 - doReturn...when...：不会实际调用方法；
-- when...thenReturn...：会实际调用方法，但是会按照stub的设置的返回值返回数据，而不因执行了代码而返回代码运行结果。
+- when...thenReturn...：会实际调用方法，但是会按照stub的设置的返回值返回数据，而不因执行了代码而返回代码运行结果。  
+
+坑在哪里？  
+当你stub的方法没有完成或未经过测试或你根本不想测试时，“when...thenReturn...”的方式却将其运行了，可能导致报错，你却觉得stub怎么会执行？莫名其妙！
 
 ```
 @RunWith(MockitoJUnitRunner.class)
@@ -730,8 +724,8 @@ public class StubbingTest {
 verify上同Mockito仍是异曲同工，略有不同。如私有的verify：
 
 单元测试类：  
-测试bookPrinter打印1至5页，调用了自有的私有print(anyIt()))方法5次。  
-当然，也可以校验调用了1次print(1)、1次print(2)……更为严谨。
+测试bookPrinter打印1至5页，需验证调用了自有的私有print(anyIt()))方法5次。当然，也可以校验调用了1次print(1)、1次print(2)……更为严谨。  
+用例代码：
 ```
 @RunWith(MockitoJUnitRunner.class)
 public class VerifyMethodTest {
@@ -760,7 +754,8 @@ org.mockito.exceptions.misusing.NotAMockException:
 Argument passed to verify() is of type BookPrinter and is not a mock!
 Make sure you place the parenthesis correctly!
 ```
-此处引出一个mock原理的讨论：不论stub、verify，关键在于目标对象是经Mockito\PowerMockito构建出来的对象，构建形式可以是spy或mock，只有它构建出来的，它才会有“监视”的可能，从而实现stub、verify的目的。  
+此处引出一个mock原理的讨论：不论stub、verify，关键在于目标对象是经Mockito\PowerMockito构建出来的对象，构建形式可以是spy或mock，只有它构建出来的，它才会有“监视”的可能，从而实现stub、verify的目的。 
+
 spy后的的单元测试类：
 ```
 @RunWith(PowerMockRunner.class)

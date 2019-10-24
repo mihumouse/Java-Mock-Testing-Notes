@@ -5,6 +5,7 @@ import java.util.List;
 import com.bss.model.Book;
 import com.bss.util.BookUtil;
 
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
@@ -14,10 +15,10 @@ import org.mockito.junit.MockitoJUnitRunner;
 public class ArgumentMatherTest {
 
     /**
-     * try a ArgumentMatchers01
-     * for List
+     * try a ArgumentMatchers for List
      */
-    public static void testArgumentMather01() {
+    @Test
+    public void testArgumentMather01() {
         List list = Mockito.mock(List.class);
 
         // any int value return "hello"
@@ -39,7 +40,8 @@ public class ArgumentMatherTest {
      * try a ArgumentMatchers
      * stub BookUtil.isITBook()，if Book's name contains "java", return "true"
      */
-    public static void testArgumentMather02() {
+    @Test
+    public void testArgumentMather02() {
         BookUtil bookUtil = Mockito.mock(BookUtil.class);
         
         Mockito.when(bookUtil.isITBook(ArgumentMatchers.argThat(book -> {
@@ -50,7 +52,7 @@ public class ArgumentMatherTest {
             }
         }))).thenReturn(true);
         
-        // 不能同时用两个ArgumentMatchers
+        // Don't use more than one ArgumentMatchers on the same method like this
         // Mockito.when(bookUtil.isITBook(ArgumentMatchers.any())).thenReturn(false);
 
         Book book1 = new Book();
@@ -59,10 +61,5 @@ public class ArgumentMatherTest {
         Book book2 = new Book();
         book2.setName("some book");
         System.out.println(book2.getName() + " :" + bookUtil.isITBook(book2));
-    }
-
-    public static void main(String [] args) {
-        testArgumentMather01();
-        testArgumentMather02();
     }
 }

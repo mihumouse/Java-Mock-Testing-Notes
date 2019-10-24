@@ -22,10 +22,10 @@ public class InOrderTest {
     
     @Test
     public void printByPageTest01() {
-        // 打印第1-5页
+        // wanted:print from 1 to 5
         bookPrinter.printByPage(1, 5);
 
-        // 验证打印时按照1、2、3、4、5页的顺序获取内容
+        // verify: in 1 2 3 4 5 order
         InOrder inOrder = Mockito.inOrder(book);
         inOrder.verify(book).getContentByPage(1);
         inOrder.verify(book).getContentByPage(2);
