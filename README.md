@@ -14,12 +14,12 @@ Mock测试解决的问题：构建模拟类，避免测试依赖外部类；构�
     - [In Order](#in-order)
   - [PowerMockito](#powermockito)
     - [Setup PowerMock](#setup-powermock)
-    - [test private method](#test-private-method)
-    - [stubbing](#stubbing)
+    - [Test private method](#test-private-method)
+    - [Stubbing](#stubbing-1)
     - [Verify](#verify-1)
     - [About @PrepareForTest](#about-preparefortest)
     - [About @RunnWith](#about-runnwith)
-  - [some summary of unit testing](#some-summary-of-unit-testing)
+  - [Some summary of unit testing](#some-summary-of-unit-testing)
 ## Mockito
 ![image text](https://raw.githubusercontent.com/mihumouse/Java-Mock-Testing-Notes/master/media/img/mockito%40logo%402x.png)
 
@@ -604,7 +604,7 @@ public class InOrderTest {
     </dependency>
  ```
 
-### test private method
+### Test private method
 当业务类中抽取了private方法时，使用Mockito无法执行，需要借助PowerMockito。  
 如下类，包含一个统计字符串中字数的私有方法，在单元测试中，应单独设计用例测试：    
 ```
@@ -683,7 +683,7 @@ public class MockUtil {
     }
 }
 ```
-### stubbing
+### Stubbing
 与Mockito异曲同工，稍有差异，同样扩展了私有方法的支持。  
 stub有一处坑：PowerMock提供了两种stub方式：doReturn...when...，when...thenReturn...  
 当对象为mock时，stub的方法均不会被真正调用代码，当采用的spy方式时：  
@@ -804,11 +804,11 @@ Mocking methods declared on non-public parent classes is not supported.
 关于测试的执行器，@RunWith(PowerMockRunner.class)、@RunWith(MockitoJUnitRunner.class)的选用，建议优先使用MockitoJUnitRunner。  
 MockitoJUnitRunner已经可满足大多数场景，很多时候是由于类设计的不合理，倒逼你使用PowerMockRunner进行静态资源的测试，且容易出现莫名的问题。
 
-## some summary of unit testing
+## Some summary of unit testing
 - 功能函数职能单一，复杂业务按行为单元拆分多个子方法，逐个子方法测试，清晰业务、简化用例复杂度、易于达到覆盖度；
 - 用例函数职能单一，避免单用例覆盖多个场景，人工增加用例复杂度和后期运维成本； 
 - 断言职能单一，确保测试程序执行时，能快速定位哪个预期结果存在问题；
 - 用例注释完备，体现测试的场景、目的及期望结果，便于后续清晰理解用例用意；
 - 用例命名：com.dce.BusiClass.methodName()类的测试类及方法应为对应test目录的com.dce.BusiClassTest.methodNameTest01()、methodNameTest02()、methodNameTest03()等；
-- 用例代码基本顺序：data -> stub -> run -> verify
+- 用例代码基本顺序：mock -> stub -> run -> verify
 - 不论任何覆盖度级别，用例达到覆盖度无法保证业务测试充分，测试质量最终依赖对需求的理解和完善的用例(极值等特殊场景)；
