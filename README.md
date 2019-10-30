@@ -809,6 +809,6 @@ MockitoJUnitRunner已经可满足大多数场景，很多时候是由于类设�
 - 用例函数职能单一，避免单用例覆盖多个场景，人工增加用例复杂度和后期运维成本； 
 - 断言职能单一，确保测试程序执行时，能快速定位哪个预期结果存在问题；
 - 用例注释完备，体现测试的场景、目的及期望结果，便于后续清晰理解用例用意；
-- 用例命名：com.dce.BusiClass.methodName()类的测试类及方法应为对应test目录的com.dce.BusiClassTest.methodNameTest01()、methodNameTest02()、methodNameTest03()等；
+- 用例命名：com.dce.BusiClass.methodName()类的测试类及方法应为对应test目录的com.dce.BusiClassTest.testMethodName01()、testMethodName02()、testMethodName03()等；
 - 用例代码基本顺序：mock -> stub -> run -> verify
 - 不论任何覆盖度级别，用例达到覆盖度无法保证业务测试充分，测试质量最终依赖对需求的理解和完善的用例(极值等特殊场景)；
