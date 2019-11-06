@@ -17,6 +17,7 @@ Mock测试解决的问题：构建模拟类，避免测试依赖外部类；构�
     - [Test private method](#test-private-method)
     - [Stubbing](#stubbing-1)
     - [Verify](#verify-1)
+    - [About variable parameters](#about-variable-parameters)
     - [About @PrepareForTest](#about-preparefortest)
     - [About @RunnWith](#about-runnwith)
   - [Some summary of unit testing](#some-summary-of-unit-testing)
@@ -682,7 +683,7 @@ public class MockUtil {
         return returnObj;
     }
 }
-```
+```   
 ### Stubbing
 与Mockito异曲同工，稍有差异，同样扩展了私有方法的支持。  
 stub有一处坑：PowerMock提供了两种stub方式：doReturn...when...，when...thenReturn...  
@@ -783,6 +784,58 @@ public class VerifyMethodTest {
     }
 }
 ```
+### About variable parameters
+测试偶尔会遇到方法参数为可变参数，在reflect处理上需捎加注意，否则遇到IllegalArgumentException:wrong number of arguments等错误。  
+假设有一个方法是private的不定长参数的，目的是连接多个字符串，返回结果（仅为举例，无其他校验） 。   
+```
+public class StringUtil {
+    /**
+     * connect strings by StringBuilder
+     * @param strings
+     * @return result of connect strings
+     */
+    private String con(String... ss) {
+        StringBuilder result = new StringBuilder();
+        for (String s : ss) {
+            result.append(s);
+        }
+        return result.toString();
+
+    }
+}
+```
+单元测试用例：   
+```
+@RunWith(MockitoJUnitRunner.class)
+public class VariableParametersTest {
+
+    @InjectMocks
+    private StringUtil stringUtil;
+
+    @Test
+    public void testVarableParameterMethod()
+            throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+        Method method = PowerMockito.method(StringUtil.class, "con", String[].class);
+        String result = (String)method.invoke(stringUtil, new String[]{"a", "b", "c"});
+        Assert.assertEquals("abc", result);
+    }
+}
+```
+虽然不定长参数本质是一个数组，但当反射invoke传入数组时，仍会报错：   
+```
+java.lang.IllegalArgumentException: wrong number of arguments
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:498)
+	at com.bss.powermockito.VariableParametersTest.testVarableParameterMethod(VariableParametersTest.java:25)
+```
+数组前加强转，passed：
+```
+        Method method = PowerMockito.method(StringUtil.class, "con", String[].class);
+        String result = (String)method.invoke(stringUtil, (Object)new String[]{"a", "b", "c"});
+```
+
 ### About @PrepareForTest
 Verify代码有一处类注解（见VerifyMethodTest.printByPage02()用例）——@PrepareForTest({BookPrinter.class})  
 该注解在PowerMockito中扩展测试final、private、static方法起主要作用，可谓欲测private，必先PrepareForTest。  
@@ -811,4 +864,4 @@ MockitoJUnitRunner已经可满足大多数场景，很多时候是由于类设�
 - 用例注释完备，体现测试的场景、目的及期望结果，便于后续清晰理解用例用意；
 - 用例命名：com.dce.BusiClass.methodName()类的测试类及方法应为对应test目录的com.dce.BusiClassTest.testMethodName01()、testMethodName02()、testMethodName03()等；
 - 用例代码基本顺序：mock -> stub -> run -> verify
-- 不论任何覆盖度级别，用例达到覆盖度无法保证业务测试充分，测试质量最终依赖对需求的理解和完善的用例(极值等特殊场景)；
+- 不论任何覆盖度级别，用例达到覆盖度无法保证业务测试充分，测试质量最终依赖对需求的理解和完善的用例(极值等特殊场景)。
