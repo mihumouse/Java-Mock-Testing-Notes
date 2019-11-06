@@ -17,9 +17,12 @@ Mock测试解决的问题：构建模拟类，避免测试依赖外部类；构�
     - [Test private method](#test-private-method)
     - [Stubbing](#stubbing-1)
     - [Verify](#verify-1)
-    - [About variable parameters](#about-variable-parameters)
     - [About @PrepareForTest](#about-preparefortest)
     - [About @RunnWith](#about-runnwith)
+    - [About @PowerMockIgnore](#about-powermockignore)
+  - [Some puzzles](#some-puzzles)
+    - [About variable parameters](#about-variable-parameters)
+    - [About Supperclass](#about-supperclass)
   - [Some summary of unit testing](#some-summary-of-unit-testing)
 ## Mockito
 ![image text](https://raw.githubusercontent.com/mihumouse/Java-Mock-Testing-Notes/master/media/img/mockito%40logo%402x.png)
@@ -784,6 +787,36 @@ public class VerifyMethodTest {
     }
 }
 ```
+
+### About @PrepareForTest
+Verify代码有一处类注解（见VerifyMethodTest.printByPage02()用例）——@PrepareForTest({BookPrinter.class})  
+该注解在PowerMockito中扩展测试final、private、static方法起主要作用，可谓欲测private，必先PrepareForTest。  
+说白了就是增加此注解，测试用例执行前，会将注解中的class提前摸底，搞清楚都有什么方法，便于后续执行。  
+忘记添加，会报：
+```
+Stack trace:
+org.mockito.exceptions.misusing.UnfinishedVerificationException: 
+Missing method call for verify(mock) here:
+-> at com.bss.powermockito.VerifyMethodTest.printByPage02(VerifyMethodTest.java:50)
+Example of correct verification:
+    verify(mock).doSomething()
+Also, this error might show up because you verify either of: final/private/equals()/hashCode() methods.
+Those methods *cannot* be stubbed/verified.
+Mocking methods declared on non-public parent classes is not supported.
+```
+
+### About @RunnWith
+关于测试的执行器，@RunWith(PowerMockRunner.class)、@RunWith(MockitoJUnitRunner.class)的选用，建议优先使用MockitoJUnitRunner。  
+MockitoJUnitRunner已经可满足大多数场景，很多时候是由于类设计的不合理，倒逼你使用PowerMockRunner进行静态资源的测试，且容易出现莫名的问题。   
+
+### About @PowerMockIgnore
+网上对PowerMockIgnore的解释只言片语，直白粗浅的解释：      
+1.PowerMock工作原理即使用自定义类加载器来加载被修改过的类，实现打桩和验证；   
+2.有的程序十分喜欢蹭当前线程的类加载器把自己给加载了；   
+3.根据“1、2”，可能导致本该在一个加载器的几个类被拆散（可能报ClassCastException异常），还兴许一个类在多个加载器加载了（可能报LinkageError）；   
+不管怎么地吧，那开发者就要显式的告诉mock的classLoder：加载的时候忽略某些包吧，它们是有自己的归宿的，从而解决矛盾，如：@PowerMockIgnore({"javax.xml.\*"})
+
+## Some puzzles
 ### About variable parameters
 测试偶尔会遇到方法参数为可变参数，在reflect处理上需捎加注意，否则遇到IllegalArgumentException:wrong number of arguments等错误。  
 假设有一个方法是private的不定长参数的，目的是连接多个字符串，返回结果（仅为举例，无其他校验） 。   
@@ -835,28 +868,59 @@ java.lang.IllegalArgumentException: wrong number of arguments
         Method method = PowerMockito.method(StringUtil.class, "con", String[].class);
         String result = (String)method.invoke(stringUtil, (Object)new String[]{"a", "b", "c"});
 ```
-
-### About @PrepareForTest
-Verify代码有一处类注解（见VerifyMethodTest.printByPage02()用例）——@PrepareForTest({BookPrinter.class})  
-该注解在PowerMockito中扩展测试final、private、static方法起主要作用，可谓欲测private，必先PrepareForTest。  
-说白了就是增加此注解，测试用例执行前，会将注解中的class提前摸底，搞清楚都有什么方法，便于后续执行。  
-忘记添加，会报：
+### About Supperclass
+Mock的应用过程，有一种场景不被支持：在测试类存在父类，且业务需要使用父类的属性，同时使用了@RunWith(PowerMockRunner.class)、@PrepareForTest，则父类属性不会被注入到测试类中。
+父子类如下（一段仅为举例的代码）：   
 ```
-Stack trace:
-org.mockito.exceptions.misusing.UnfinishedVerificationException: 
-Missing method call for verify(mock) here:
--> at com.bss.powermockito.VerifyMethodTest.printByPage02(VerifyMethodTest.java:50)
-Example of correct verification:
-    verify(mock).doSomething()
-Also, this error might show up because you verify either of: final/private/equals()/hashCode() methods.
-Those methods *cannot* be stubbed/verified.
-Mocking methods declared on non-public parent classes is not supported.
+public class Book {
+    protected String name;
+    protected String auther;
+    protected Object content;
+    ...
+}
+
+public class Ebook extends Book {
+    private int binarySize;
+    ...
+}
 ```
+单元测试用例：   
+```
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({Ebook.class})
+public class SuperclassFieldInjectTest {
+    @InjectMocks
+    Ebook ebook;
 
-### About @RunnWith
-关于测试的执行器，@RunWith(PowerMockRunner.class)、@RunWith(MockitoJUnitRunner.class)的选用，建议优先使用MockitoJUnitRunner。  
-MockitoJUnitRunner已经可满足大多数场景，很多时候是由于类设计的不合理，倒逼你使用PowerMockRunner进行静态资源的测试，且容易出现莫名的问题。
+    @Mock
+    Object content;
 
+    @Test
+    public void testSupperclassFieldInject() throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
+        // at first, the ebook's content is null, because of @PrepareForTest
+        System.out.println("content:" + content);
+        System.out.println("ebook's content:" + ebook.getContent());
+
+        // bindings by reflect
+        Field field = ebook.getClass().getSuperclass().getDeclaredField("content");
+        field.setAccessible(true);
+        field.set(ebook, content);
+
+        // then ebook's content had the reference you want
+        System.out.println("content:" + content);
+        System.out.println("ebook's content:" + ebook.getContent());
+    }
+}
+======================================================
+print:
+content:Mock for Object, hashCode: 1446001495
+ebook's content:null
+content:Mock for Object, hashCode: 1446001495
+ebook's content:Mock for Object, hashCode: 1446001495
+======================================================
+```
+分析：主要问题在于PrepareForTest，若不使用该注解，则可正常将Mock类注入测试类中。加了PrepareForTest注解，则注不进去，应该是该注解在Prepare时偷懒了，没有向上解析父类和接口相关语义，导致注入失效（源码未读，勉强猜测）。   
+故例中只好使用反射找到父类Field并人工绑定，由于属性访问权限非public，故强制setAccessible，以获取权限。   
 ## Some summary of unit testing
 - 功能函数职能单一，复杂业务按行为单元拆分多个子方法，逐个子方法测试，清晰业务、简化用例复杂度、易于达到覆盖度；
 - 用例函数职能单一，避免单用例覆盖多个场景，人工增加用例复杂度和后期运维成本； 

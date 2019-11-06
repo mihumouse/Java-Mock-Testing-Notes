@@ -1,4 +1,4 @@
-package com.bss.powermockito;
+package com.bss.others;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;

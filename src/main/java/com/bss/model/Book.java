@@ -1,11 +1,11 @@
 package com.bss.model;
 
 public class Book {
-    private String name;
-    private String auther;
-    private String publishDate;
-    private Object content;
-    private int pageNum;
+    protected String name;
+    protected String auther;
+    protected String publishDate;
+    protected Object content;
+    protected int pageNum;
 
     public Book() {
     }
