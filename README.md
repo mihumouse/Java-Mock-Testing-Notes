@@ -11,6 +11,7 @@ Mock测试解决的问题：构建模拟类，避免测试依赖外部类；构�
     - [Mock by annotation](#mock-by-annotation)
     - [Verify](#verify)
     - [Spy](#spy)
+    - [Answer](#answer)
     - [In Order](#in-order)
   - [PowerMockito](#powermockito)
     - [Setup PowerMock](#setup-powermock)
@@ -514,7 +515,92 @@ public class SpyTest {
     }
 }
  ```
+### Answer
+有一种场景：当你要测试的函数，处理过程中依赖其他mock类的函数（公共方法、工具类等），该函数正常业务下会多数据进行更新，但由于mock导致其不被执行（除特殊情况，也不应该执行），但为了测试能走下去，仍需执行一些必要的更新，此时需要用answer认为定义更新逻辑。如下：   
+预测试BookPrinter类的printByPage方法，但不想执行book.getContentByPage(printNum)：
+```
+public class BookPrinter {
+    @Resource
+    Book book;
 
+    /**
+     * print content between startPageNum and endPageNum
+     * @param beginPageNum 
+     * @param endPageNum
+     * @return total print count
+     */
+    public int printByPage(int beginPageNum, int endPageNum) {
+        // total page
+        int totalPrintCount = 0;
+        // total words
+        int totalWords = 0; 
+
+        int printNum = beginPageNum;
+        while(printNum <= endPageNum) {
+            String currentPageContent = book.getContentByPage(printNum);
+            print(currentPageContent);
+            printNum++;
+            totalPrintCount++;
+            totalWords += getNumberOfWords(currentPageContent);
+        }
+        System.out.println("total words:" + totalWords);
+        return totalPrintCount;
+    }
+    …… 
+}
+
+public class Book {
+    protected String name;
+    protected String auther;
+    protected String publishDate;
+    protected Object content;
+    protected int pageNum;
+    
+    public String getContentByPage(int pageNum) {
+        // to do
+        if(pageNum > 1) {
+            throw new NullPointerException();
+        }
+        return "some content";
+    }
+    ……
+}
+```
+测试用例：   
+```
+@RunWith(MockitoJUnitRunner.class)
+public class AnswerTest {
+
+    @InjectMocks
+    BookPrinter bookPrinter;
+    
+    @Mock
+    Book book;
+    
+    @Test
+    public void testAnswer() {
+        // when called the mock class's method and didn't want it to run, and expect it do some logic, then like this
+        Mockito.when(book.getContentByPage(Mockito.anyInt()))
+        .then((Answer<String>) invocation -> {
+            int pageNo = (int)invocation.getArgument(0);
+            return "this is page " + pageNo;
+        });
+
+        int totalSum = bookPrinter.printByPage(1, 5);
+
+        Assert.assertEquals(5, totalSum);
+    }
+}
+
+结果打印如下:
+this is page 1
+this is page 2
+this is page 3
+this is page 4
+this is page 5
+total words:20
+```
+通过invocation获取在测试程序运行时的实际参数值，并进行期望的加工、处理，确保后续测试的正常进行。
 ### In Order
 当期望目标测试逻辑存在时序需求时，需要用InOrder进行验证。  
 如：验证打印顺序是否正确。  
@@ -814,7 +900,7 @@ MockitoJUnitRunner已经可满足大多数场景，很多时候是由于类设�
 1.PowerMock工作原理即使用自定义类加载器来加载被修改过的类，实现打桩和验证；   
 2.有的程序十分喜欢蹭当前线程的类加载器把自己给加载了；   
 3.根据“1、2”，可能导致本该在一个加载器的几个类被拆散（可能报ClassCastException异常），还兴许一个类在多个加载器加载了（可能报LinkageError）；   
-不管怎么地吧，那开发者就要显式的告诉mock的classLoder：加载的时候忽略某些包吧，它们是有自己的归宿的，从而解决矛盾，如：@PowerMockIgnore({"javax.xml.\*"})
+不管怎么地吧，那开发者就要显式的告诉mock的classLoder：加载的时候忽略某些包吧，它们是有自己的归宿的（比如系统加载器），从而解决矛盾，如：@PowerMockIgnore({"javax.xml.\*"})
 
 ## Some puzzles
 ### About variable parameters
