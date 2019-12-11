@@ -24,11 +24,12 @@ Mock测试解决的问题：构建模拟类，避免测试依赖外部类；构�
   - [Some puzzles](#some-puzzles)
     - [About variable parameters](#about-variable-parameters)
     - [About Supperclass](#about-supperclass)
+    - [mock private inner class](#mock-private-inner-class)
   - [Some summary of unit testing](#some-summary-of-unit-testing)
 ## Mockito
 ![image text](https://raw.githubusercontent.com/mihumouse/Java-Mock-Testing-Notes/master/media/img/mockito%40logo%402x.png)
 
-[Mockito javadoc online](https://raw.githubusercontent.com/Snailclimb/JavaGuide/master/README.md)：Mockito2.X版本的在线文档及案例，组件的整体细节，建议查阅在线文档。本文档整理实际测试中常用场景。
+[Mockito javadoc online](https://javadoc.io/doc/org.mockito/mockito-core/2.10.0/org/mockito/Mockito.html)：Mockito2.X版本的在线文档及案例，组件的整体细节，建议查阅在线文档。本文档整理实际测试中常用场景。
 
 ### Setup Mocktio
 
@@ -1006,7 +1007,55 @@ ebook's content:Mock for Object, hashCode: 1446001495
 ======================================================
 ```
 分析：主要问题在于PrepareForTest，若不使用该注解，则可正常将Mock类注入测试类中。加了PrepareForTest注解，则注不进去，应该是该注解在Prepare时偷懒了，没有向上解析父类和接口相关语义，导致注入失效（源码未读，勉强猜测）。   
-故例中只好使用反射找到父类Field并人工绑定，由于属性访问权限非public，故强制setAccessible，以获取权限。   
+故例中只好使用反射找到父类Field并人工绑定，由于属性访问权限非public，故强制setAccessible，以获取权限。  
+### mock private inner class
+Mockito中mock的行为，即在测试运行的容器（或环境）中，对任意指定的class进行模拟，包括java中的任意class：static、final、inner class，最根本的mock使用，就是拿到class，反射机制可以获取任意class类型，然后将其mock。   
+比如：私有内部类，常规机制是无法直接被外部访问的，如果想mock，可采用如下方式   
+想测试InnerClass.hello()方法，且不依赖Inner（此处仅为例子简单而设计）
+```
+/**
+ * test mock InnerClass
+ */
+public class InnerClass {
+    private Inner inner;
+    public String hello() {
+        return "hello " + inner.getName();
+    }
+
+    private class Inner {
+        private String name;
+
+        public String getName() {
+            return this.name;
+        }
+    }
+}
+```
+用例编写：
+```
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({InnerClass.class})
+public class InnerClassTest {
+    @InjectMocks
+    InnerClass innerClass;
+    @Test
+    public void testMockInnerClass() throws Exception {
+        // stub a private inner class
+        Class clazz = Class.forName("com.bss.model.InnerClass$Inner");
+        Object mock = Mockito.mock(clazz);
+        PowerMockito.doReturn("XiaoMing").when(mock, "getName");
+
+        // binding the mock instance to the Inject mock class with reflect
+        Field field = PowerMockito.field(InnerClass.class, "inner");
+        field.set(innerClass, mock);
+        
+        // run
+        String result = innerClass.hello();
+        // verify
+        Assert.assertEquals("hello XiaoMing", result);
+    }
+}
+```
 ## Some summary of unit testing
 - 功能函数职能单一，复杂业务按行为单元拆分多个子方法，逐个子方法测试，清晰业务、简化用例复杂度、易于达到覆盖度；
 - 用例函数职能单一，避免单用例覆盖多个场景，人工增加用例复杂度和后期运维成本； 
