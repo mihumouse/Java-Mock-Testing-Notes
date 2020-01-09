@@ -25,6 +25,8 @@ Mock测试解决的问题：构建模拟类，避免测试依赖外部类；构�
     - [About variable parameters](#about-variable-parameters)
     - [About Supperclass](#about-supperclass)
     - [mock private inner class](#mock-private-inner-class)
+    - [Inject by type](#inject-by-type)
+    - [Unified the way on mock/syp and stub](#unified-the-way-on-mocksyp-and-stub)
   - [Some summary of unit testing](#some-summary-of-unit-testing)
 ## Mockito
 ![image text](https://raw.githubusercontent.com/mihumouse/Java-Mock-Testing-Notes/master/media/img/mockito%40logo%402x.png)
@@ -85,7 +87,7 @@ public class HelloMockTest {
 
 ```
 mockito基础功能：
-1. mock：对List接口进行Mock，模拟出了一个mocklis对象；
+1. mock：对List接口进行Mock，模拟出了一个mocklis对象（注：mock行为对interface、class均有效）；
 2. stub：当调用List.get(0)时，返回“Hello Mock”；
 3. verify：对目标代码的执行和结果进行验证。  
 
@@ -280,7 +282,8 @@ public class AnnotationMockTest {
         Assert.assertEquals(5,totalPrintCount);
     }
 }
-```
+```   
+
 ### Verify
 测试最终目的为验证结果正确性，mock、stub是为了解决目标测试程序对外部的依赖，verify则为验证数据、逻辑正确而存在。  
 单元测试大致有几种结果验证的场景，直接的数据验证，不需使用Mockito的verify API，逻辑的验证则需要。  
@@ -1048,13 +1051,96 @@ public class InnerClassTest {
         // binding the mock instance to the Inject mock class with reflect
         Field field = PowerMockito.field(InnerClass.class, "inner");
         field.set(innerClass, mock);
-        
+
         // run
         String result = innerClass.hello();
         // verify
         Assert.assertEquals("hello XiaoMing", result);
     }
 }
+```
+
+### Inject by type
+@Mock将类变量模拟后，向@InjectMocks修饰的类注入时，是按类型寻找并绑定的，而不是按变量名（虽然写法规范开发者要保证两者一致），故当@InjectMocks修饰的类有两个同类型的类变量时，@Mock会失效(运行时期望的mock对象为null)，因为它无法聪明到懂得如何按你的意愿匹配。
+思考一个问题：同一个类中存在两个同类型的变量的设计方式，是否合适？      
+```
+@RunWith(MockitoJUnitRunner.class)
+public class AnnotationMockTest {
+
+    @InjectMocks
+    BookPrinter bookPrinter;
+
+    // Suppose 'BookPrinter' has two field of type 'Book', and you coding like this, mockito couldn't know how to matching, because it injects by type. if you insist, 'book1' and 'book2' will be null at runtime.
+    @Mock
+    Book book1;
+
+    @Mock
+    Book book2;
+
+    @Test
+    public void testBookPrinter01() {
+        ......
+    }
+}
+``` 
+### Unified the way on mock/syp and stub
+在一些场景，存在mockito\powermockito混用的情况，但在mock\spy同时stub时，要注意组件顺序，或者说尽量统一成Powermockito，否则会收获一个异常。   
+原因是PowerMockito是基于Mockito接口的封装，当后续的行为使用Powermockito时，那么前序行为也需要用PowerMockito。   
+通俗说就是后面用高级货，那么前序也要用高级货；前序用低端产品，后续无法支持高端的行为。   
+如下代码：   
+testMockStubWay01()的spy使用Mockito，stub使用PowerMockito，运行报异常（UnfinishedStubbingException，详见代码下方）；
+testMockStubWay02()的spy、stub均使用PowerMockito，运行正常；   
+```
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({BookPrinter.class})
+public class VerifyMethodTest {
+    @InjectMocks
+    BookPrinter bookPrinter;
+    
+    ......
+
+    @Test
+    public void testMockStubWay01() throws Exception {
+        // spy by Mockito
+        BookPrinter spy = Mockito.spy(bookPrinter);
+
+        // stub by PowerMockito
+        // Excption:org.mockito.exceptions.misusing.UnfinishedStubbingException
+        PowerMockito.doNothing().when(spy, "print", Mockito.anyString());
+        
+        // run
+        spy.printByPage(1, 5);
+
+        // verify
+        PowerMockito.verifyPrivate(spy, Mockito.times(5)).invoke("print", Mockito.any());
+    }
+
+    @Test
+    public void testMockStubWay02() throws Exception {
+        // spy by PowerMockito
+        BookPrinter spy = PowerMockito.spy(bookPrinter);
+
+        // stub by PowerMockito
+        // run well
+        PowerMockito.doNothing().when(spy, "print", Mockito.anyString());
+        
+        // run
+        spy.printByPage(1, 5);
+
+        // verify
+        PowerMockito.verifyPrivate(spy, Mockito.times(5)).invoke("print", Mockito.any());
+    }
+```
+```
+Stack trace:
+org.mockito.exceptions.misusing.UnfinishedStubbingException: 
+Unfinished stubbing detected here:
+-> at com.bss.powermockito.VerifyMethodTest.testMockStubWay01(VerifyMethodTest.java:60)
+E.g. thenReturn() may be missing.
+Examples of correct stubbing:
+    when(mock.isOk()).thenReturn(true);
+    when(mock.isOk()).thenThrow(exception);
+    doThrow(exception).when(mock).someVoidMethod();
 ```
 ## Some summary of unit testing
 - 功能函数职能单一，复杂业务按行为单元拆分多个子方法，逐个子方法测试，清晰业务、简化用例复杂度、易于达到覆盖度；
