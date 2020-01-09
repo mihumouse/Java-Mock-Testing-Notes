@@ -24,9 +24,9 @@ Mock测试解决的问题：构建模拟类，避免测试依赖外部类；构�
   - [Some puzzles](#some-puzzles)
     - [About variable parameters](#about-variable-parameters)
     - [About Supperclass](#about-supperclass)
-    - [mock private inner class](#mock-private-inner-class)
+    - [Mock private inner class](#mock-private-inner-class)
     - [Inject by type](#inject-by-type)
-    - [Unified the way on mock/syp and stub](#unified-the-way-on-mocksyp-and-stub)
+    - [Unified the way on mock/spy and stub](#unified-the-way-on-mockspy-and-stub)
   - [Some summary of unit testing](#some-summary-of-unit-testing)
 ## Mockito
 ![image text](https://raw.githubusercontent.com/mihumouse/Java-Mock-Testing-Notes/master/media/img/mockito%40logo%402x.png)
@@ -1011,7 +1011,7 @@ ebook's content:Mock for Object, hashCode: 1446001495
 ```
 分析：主要问题在于PrepareForTest，若不使用该注解，则可正常将Mock类注入测试类中。加了PrepareForTest注解，则注不进去，应该是该注解在Prepare时偷懒了，没有向上解析父类和接口相关语义，导致注入失效（源码未读，勉强猜测）。   
 故例中只好使用反射找到父类Field并人工绑定，由于属性访问权限非public，故强制setAccessible，以获取权限。  
-### mock private inner class
+### Mock private inner class
 Mockito中mock的行为，即在测试运行的容器（或环境）中，对任意指定的class进行模拟，包括java中的任意class：static、final、inner class，最根本的mock使用，就是拿到class，反射机制可以获取任意class类型，然后将其mock。   
 比如：私有内部类，常规机制是无法直接被外部访问的，如果想mock，可采用如下方式   
 想测试InnerClass.hello()方法，且不依赖Inner（此处仅为例子简单而设计）
@@ -1061,7 +1061,7 @@ public class InnerClassTest {
 ```
 
 ### Inject by type
-@Mock将类变量模拟后，向@InjectMocks修饰的类注入时，是按类型寻找并绑定的，而不是按变量名（虽然写法规范开发者要保证两者一致），故当@InjectMocks修饰的类有两个同类型的类变量时，@Mock会失效(运行时期望的mock对象为null)，因为它无法聪明到懂得如何按你的意愿匹配。
+@Mock将类模拟后，向@InjectMocks修饰的类变量注入时，是按类型寻找并匹配的，而不是按变量名（虽然写法规范开发者要保证两者一致），故当@InjectMocks修饰的类有两个同类型的类变量时，@Mock会失效(运行时期望的mock对象为null)，因为它无法聪明到懂得如何按你的意愿匹配。
 思考一个问题：同一个类中存在两个同类型的变量的设计方式，是否合适？      
 ```
 @RunWith(MockitoJUnitRunner.class)
@@ -1083,12 +1083,12 @@ public class AnnotationMockTest {
     }
 }
 ``` 
-### Unified the way on mock/syp and stub
+### Unified the way on mock/spy and stub
 在一些场景，存在mockito\powermockito混用的情况，但在mock\spy同时stub时，要注意组件顺序，或者说尽量统一成Powermockito，否则会收获一个异常。   
 原因是PowerMockito是基于Mockito接口的封装，当后续的行为使用Powermockito时，那么前序行为也需要用PowerMockito。   
 通俗说就是后面用高级货，那么前序也要用高级货；前序用低端产品，后续无法支持高端的行为。   
 如下代码：   
-testMockStubWay01()的spy使用Mockito，stub使用PowerMockito，运行报异常（UnfinishedStubbingException，详见代码下方）；
+testMockStubWay01()的spy使用Mockito，stub使用PowerMockito，运行报异常（UnfinishedStubbingException，详见代码下方）；   
 testMockStubWay02()的spy、stub均使用PowerMockito，运行正常；   
 ```
 @RunWith(PowerMockRunner.class)
