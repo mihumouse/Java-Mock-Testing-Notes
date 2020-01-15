@@ -133,8 +133,8 @@ public class StubbingTest {
 
 不论stub或verify，都存在对方法中参数进行模糊或具体的匹配需求，使用ArgumentMatchers对参数进行匹配。  
 如：  
-1. 当List.get(n)的参数n为任意数字，都返回“hello”，或当List.get()的参数n>3时抛出数组越界异常。 
-2. 当BookUtil.isITBook(String name)的参数的name属性值包含“java”时，返回true，否则返回false；   
+1. 当List.get(n)的参数n为任意数字，都返回“hello”，或当List.get()的参数n>3时抛出数组越界异常;
+2. 当BookUtil.isITBook(String name)的参数的name属性值包含“java”时，返回true，否则返回false。      
 
 此时，需要对入参有一个匹配行为，即使用ArgumentMathers。  
 
@@ -225,6 +225,7 @@ hello
 Thinking in java :true
 some book :false
 ```
+注：stub或verify如果有多个参数，那么你需要注意，多个参数要么全用argument matcher，要么全不用argument matcher。anyInt(), anyString(), eq()等写法，也属于argument matcher。
 
 ### Mock by annotation
 业务开发中，Spring下的类通常以@Resource方式注入多个对象，测试此类时，Mockito.mock()的方式可以以注解写法替代，并完成注入，如下：  
