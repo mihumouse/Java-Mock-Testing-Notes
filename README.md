@@ -2,7 +2,7 @@
 Mock测试解决的问题：构建模拟类，避免测试依赖外部类；构造期望数据，方便用例数据产生；提供验证机制，简化运行结果核对。  
 ## 目录
 - [Java-Mock-Testing-Notes](#java-mock-testing-notes)
-  - [目录](#%e7%9b%ae%e5%bd%95)
+  - [目录](#目录)
   - [Mockito](#mockito)
     - [Setup Mocktio](#setup-mocktio)
     - [Hello Mockito](#hello-mockito)
@@ -27,6 +27,7 @@ Mock测试解决的问题：构建模拟类，避免测试依赖外部类；构�
     - [Mock private inner class](#mock-private-inner-class)
     - [Inject by type](#inject-by-type)
     - [Unified the way on mock/spy and stub](#unified-the-way-on-mockspy-and-stub)
+    - [update jdk and mock version](#update-jdk-and-mock-version)
   - [Some summary of unit testing](#some-summary-of-unit-testing)
 ## Mockito
 ![image text](https://raw.githubusercontent.com/mihumouse/Java-Mock-Testing-Notes/master/media/img/mockito%40logo%402x.png)
@@ -1142,6 +1143,11 @@ Examples of correct stubbing:
     when(mock.isOk()).thenReturn(true);
     when(mock.isOk()).thenThrow(exception);
     doThrow(exception).when(mock).someVoidMethod();
+```
+### update jdk and mock version
+升级JDK版本后，可能出现如下底层异常，此时需要同步对mockito版本在pom.xml中进行更新。
+```
+Underlying exception : java.lang.UnsupportedOperationException: Cannot define class using reflection
 ```
 ## Some summary of unit testing
 - 功能函数职能单一，复杂业务按行为单元拆分多个子方法，逐个子方法测试，清晰业务、简化用例复杂度、易于达到覆盖度；
